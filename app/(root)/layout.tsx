@@ -1,3 +1,4 @@
+import Sidebar from "@/components/Sidebar";
 import React from "react";
 
 export default function RootLayout({
@@ -7,9 +8,10 @@ export default function RootLayout({
 }) {
   return (
     <>
-      <header></header>
+      <header className="mx-auto max-w-screen-2xl">
+        <Sidebar />
+      </header>
       {children}
-      <footer></footer>
     </>
   );
 }
