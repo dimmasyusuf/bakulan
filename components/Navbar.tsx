@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import AuthDialog from "@/components/AuthDialog";
+import LoginDialog from "@/components/LoginDialog";
 import { auth } from "@/auth";
 
 export default async function Navbar() {
@@ -39,7 +39,7 @@ export default async function Navbar() {
             <AvatarFallback>{session?.user?.name}</AvatarFallback>
           </Avatar>
         ) : (
-          <AuthDialog />
+          <LoginDialog />
         )}
       </div>
     </nav>
