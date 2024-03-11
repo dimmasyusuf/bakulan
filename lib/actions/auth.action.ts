@@ -60,7 +60,7 @@ export const loginUser = async (values: z.infer<typeof loginFormSchema>) => {
     if (error instanceof AuthError) {
       switch (error.type) {
         case "CredentialsSignin":
-          return { error: "Invalid credentials!" };
+          return { error: "Email or password is incorrect!" };
         default:
           return { error: "Something went wrong!" };
       }

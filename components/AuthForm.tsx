@@ -28,7 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
-import { createUser } from "@/lib/actions/auth.action";
+import { createUser, loginUser } from "@/lib/actions/auth.action";
 import { Role } from "@prisma/client";
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
 
@@ -83,32 +83,24 @@ export default function AuthForm({
   }
 
   function onLogin(values: z.infer<typeof loginFormSchema>) {
-    console.log("values:", values);
+    try {
+      setIsSubmitting(true);
 
-    // try {
-    //   setIsSubmitting(true);
+      setTimeout(async () => {
+        const user = await loginUser(values);
 
-    //   setTimeout(async () => {
-    //     const response = await signIn("credentials", {
-    //       email: values.email,
-    //       password: values.password,
-    //       redirect: false,
-    //     });
-
-    //     if (response?.error === null) {
-    //       form.reset();
-    //       setIsSubmitting(false);
-    //     } else {
-    //       toast.error(`${response?.error}`, {
-    //         position: "top-right",
-    //       });
-    //       form.reset();
-    //       setIsSubmitting(false);
-    //     }
-    //   }, 1000);
-    // } catch (error) {
-    //   console.log(error);
-    // }
+        if (user?.error) {
+          setAuthError(user?.error);
+          setIsSubmitting(false);
+        } else {
+          loginForm.reset();
+          setIsSubmitting(false);
+          openAuth(false);
+        }
+      }, 1000);
+    } catch (error) {
+      console.log("error: ", error);
+    }
   }
 
   return (
@@ -142,7 +134,7 @@ export default function AuthForm({
               <Button
                 variant="outline"
                 size="sm"
-                className={`${userRole === "Admin" && "bg-primary text-primary-foreground"} flex aspect-square h-full w-full flex-col gap-4 shadow-none`}
+                className={`${userRole === "Admin" && "bg-primary text-primary-foreground"} flex aspect-square h-full w-full flex-col gap-4 shadow-none focus:bg-primary focus:text-primary-foreground`}
                 onClick={() => setUserRole("Admin")}
               >
                 <RiAdminLine className="h-10 w-10" />
@@ -151,7 +143,7 @@ export default function AuthForm({
               <Button
                 variant="outline"
                 size="sm"
-                className={`${userRole === "Cashier" && "bg-primary text-primary-foreground"} flex aspect-square h-full w-full flex-col gap-4 shadow-none`}
+                className={`${userRole === "Cashier" && "bg-primary text-primary-foreground"} flex aspect-square h-full w-full flex-col gap-4 shadow-none focus:bg-primary focus:text-primary-foreground`}
                 onClick={() => setUserRole("Cashier")}
               >
                 <FaCashRegister className="h-10 w-10" />
@@ -246,7 +238,7 @@ export default function AuthForm({
               />
 
               {authError && (
-                <div className="flex items-center gap-x-2 rounded-md bg-destructive/15 p-3 text-sm text-destructive">
+                <div className="flex h-9 items-center gap-x-2 rounded-md bg-destructive/15 px-3 py-1 text-sm text-destructive">
                   <ExclamationTriangleIcon className="h-4 w-4" />
                   <span>{authError}</span>
                 </div>
@@ -326,6 +318,13 @@ export default function AuthForm({
                   </FormItem>
                 )}
               />
+
+              {authError && (
+                <div className="flex h-9 items-center gap-x-2 rounded-md bg-destructive/15 px-3 py-1 text-sm text-destructive">
+                  <ExclamationTriangleIcon className="h-4 w-4" />
+                  <span>{authError}</span>
+                </div>
+              )}
 
               <Button
                 type="submit"

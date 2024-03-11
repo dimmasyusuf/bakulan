@@ -8,6 +8,8 @@ import { auth } from "@/auth";
 export default async function Navbar() {
   const session = await auth();
 
+  console.log("session", session);
+
   return (
     <nav className="mx-auto flex max-w-screen-2xl items-center justify-between">
       <Link href="/" className="cursor-pointer">
@@ -39,7 +41,7 @@ export default async function Navbar() {
             <AvatarFallback>{session?.user?.name}</AvatarFallback>
           </Avatar>
         ) : (
-          <AuthDialog type="register" />
+          <AuthDialog type="login" />
         )}
       </div>
     </nav>
