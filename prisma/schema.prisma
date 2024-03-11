@@ -41,8 +41,8 @@ model Session {
 }
 
 enum Role {
-  USER
-  ADMIN
+  Admin
+  Cashier
 }
 
 model User {
@@ -52,7 +52,7 @@ model User {
   email_verified DateTime?
   image          String?
   password       String?
-  role           Role      @default(USER)
+  role           Role      @default(Cashier)
   accounts       Account[]
   sessions       Session[]
 }

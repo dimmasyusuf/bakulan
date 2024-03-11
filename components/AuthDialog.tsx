@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import LoginForm from "@/components/LoginForm";
+import AuthForm from "@/components/AuthForm";
 
-export default function LoginDialog() {
+export default function AuthDialog({ type }: { type: string }) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -13,7 +13,7 @@ export default function LoginDialog() {
         Login
       </DialogTrigger>
       <DialogContent className="flex h-[100dvh] w-full items-center justify-center overflow-auto p-0 sm:h-fit sm:w-fit">
-        <LoginForm openAuth={setIsOpen} />
+        <AuthForm type={type} openAuth={setIsOpen} />
       </DialogContent>
     </Dialog>
   );
