@@ -29,6 +29,8 @@ import {
   SelectValue,
 } from "./ui/select";
 import { createUser } from "@/lib/actions/auth.action";
+import { Role } from "@prisma/client";
+import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
 
 export default function AuthForm({
   type,
@@ -37,10 +39,11 @@ export default function AuthForm({
   type: string;
   openAuth: Dispatch<boolean>;
 }) {
-  const [showPassword, setShowPassword] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [registerStep, setRegisterStep] = useState(1);
-  const [userRole, setUserRole] = useState("");
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [registerStep, setRegisterStep] = useState<number>(1);
+  const [userRole, setUserRole] = useState<Role>();
+  const [authError, setAuthError] = useState<string>();
 
   const registerForm = useForm<z.infer<typeof registerFormSchema>>({
     resolver: zodResolver(registerFormSchema),
@@ -60,22 +63,23 @@ export default function AuthForm({
   });
 
   function onRegister(values: z.infer<typeof registerFormSchema>) {
-    console.log("values:", values);
-    console.log("userRole:", userRole);
-    // try {
-    //   setIsSubmitting(true);
-    //   const name = values.name;
-    //   const email = values.email;
-    //   const password = values.password;
-    //   setTimeout(async () => {
-    //     await createUser({ name, email, password, role: userRole });
-    //     registerForm.reset();
-    //     setIsSubmitting(false);
-    //     setRegisterStep(1);
-    //   }, 1000);
-    // } catch (error) {
-    //   console.log(error);
-    // }
+    try {
+      setIsSubmitting(true);
+      setTimeout(async () => {
+        const user = await createUser({ values, role: userRole! });
+
+        if (user.error) {
+          setAuthError(user.error);
+          setIsSubmitting(false);
+        } else {
+          registerForm.reset();
+          setIsSubmitting(false);
+          openAuth(false);
+        }
+      }, 1000);
+    } catch (error) {
+      console.log("error: ", error);
+    }
   }
 
   function onLogin(values: z.infer<typeof loginFormSchema>) {
@@ -241,30 +245,12 @@ export default function AuthForm({
                 )}
               />
 
-              {/* <FormField
-                control={registerForm.control}
-                name="role"
-                render={({ field }) => (
-                  <FormItem className="space-y-0.5">
-                    <FormLabel className="text-sm text-primary">Role</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="shadow-none">
-                          <SelectValue placeholder="Select role" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="Admin">Admin</SelectItem>
-                        <SelectItem value="Cashier">Cashier</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              /> */}
+              {authError && (
+                <div className="flex items-center gap-x-2 rounded-md bg-destructive/15 p-3 text-sm text-destructive">
+                  <ExclamationTriangleIcon className="h-4 w-4" />
+                  <span>{authError}</span>
+                </div>
+              )}
 
               <Button
                 type="submit"

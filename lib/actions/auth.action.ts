@@ -7,10 +7,15 @@ import prisma from "../db";
 import { getUserByEmail } from "./user.action";
 import { signIn } from "@/auth";
 import { AuthError } from "next-auth";
+import { Role } from "@prisma/client";
 
-export const createUser = async (
-  values: z.infer<typeof registerFormSchema>,
-) => {
+export const createUser = async ({
+  values,
+  role,
+}: {
+  values: z.infer<typeof registerFormSchema>;
+  role: Role;
+}) => {
   const validatedFields = registerFormSchema.safeParse(values);
 
   if (!validatedFields.success) {
@@ -31,6 +36,7 @@ export const createUser = async (
       name,
       email,
       password: hashedPassword,
+      role,
     },
   });
 
