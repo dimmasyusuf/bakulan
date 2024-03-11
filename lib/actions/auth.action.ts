@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { loginFormSchema, registerFormSchema } from "../validator";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import prisma from "../db";
 import { getUserByEmail } from "./user.action";
 import { signIn } from "@/auth";
