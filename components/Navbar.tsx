@@ -4,6 +4,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import AuthDialog from "@/components/AuthDialog";
 import { auth } from "@/auth";
+import { getInitials } from "@/lib/utils";
 
 export default async function Navbar() {
   const session = await auth();
@@ -38,7 +39,9 @@ export default async function Navbar() {
         {session ? (
           <Avatar>
             <AvatarImage src={session?.user?.image!} />
-            <AvatarFallback>{session?.user?.name}</AvatarFallback>
+            <AvatarFallback className="bg-primary text-primary-foreground">
+              {getInitials(session?.user?.name!)}
+            </AvatarFallback>
           </Avatar>
         ) : (
           <AuthDialog type="login" />
