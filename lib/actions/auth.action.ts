@@ -5,7 +5,7 @@ import { loginFormSchema, registerFormSchema } from "../validator";
 import bcrypt from "bcryptjs";
 import prisma from "../db";
 import { getUserByEmail } from "./user.action";
-import { signIn } from "@/auth";
+import { signIn, signOut } from "@/auth";
 import { AuthError } from "next-auth";
 import { Role } from "@prisma/client";
 
@@ -68,4 +68,8 @@ export const loginUser = async (values: z.infer<typeof loginFormSchema>) => {
 
     throw error;
   }
+};
+
+export const logoutUser = async () => {
+  await signOut();
 };

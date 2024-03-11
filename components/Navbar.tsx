@@ -1,15 +1,12 @@
 import Link from "next/link";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import AuthDialog from "@/components/AuthDialog";
 import { auth } from "@/auth";
-import { getInitials } from "@/lib/utils";
+import AuthProfile from "./AuthProfile";
 
 export default async function Navbar() {
   const session = await auth();
-
-  console.log("session", session);
 
   return (
     <nav className="mx-auto flex max-w-screen-2xl items-center justify-between">
@@ -37,12 +34,7 @@ export default async function Navbar() {
 
       <div className="flex items-center gap-8">
         {session ? (
-          <Avatar>
-            <AvatarImage src={session?.user?.image!} />
-            <AvatarFallback className="bg-primary text-primary-foreground">
-              {getInitials(session?.user?.name!)}
-            </AvatarFallback>
-          </Avatar>
+          <AuthProfile user={session?.user} />
         ) : (
           <AuthDialog type="login" />
         )}
