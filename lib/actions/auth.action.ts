@@ -8,6 +8,7 @@ import { getUserByEmail } from "./user.action";
 import { signIn, signOut } from "@/auth";
 import { AuthError } from "next-auth";
 import { Role } from "@prisma/client";
+import { v4 as uuidv4 } from "uuid";
 
 export const createUser = async ({
   values,
@@ -72,4 +73,57 @@ export const loginUser = async (values: z.infer<typeof loginFormSchema>) => {
 
 export const logoutUser = async () => {
   await signOut();
+};
+
+export const generateVerificationToken = async (email: string) => {
+  const token = uuidv4();
+  const expires = new Date(new Date().getTime() + 3600 * 1000);
+
+  const existingToken = await getVerificationTokenByEmail(email);
+
+  if (existingToken) {
+    await prisma.verificationToken.delete({
+      where: {
+        id: existingToken.id,
+      },
+    });
+  }
+
+  const verificationToken = await prisma.verificationToken.create({
+    data: {
+      identifier: email,
+      token,
+      expires,
+    },
+  });
+
+  return verificationToken;
+};
+
+export const getVerificationTokenByToken = async (token: string) => {
+  try {
+    const verificationToken = await prisma.verificationToken.findUnique({
+      where: {
+        token,
+      },
+    });
+
+    return verificationToken;
+  } catch {
+    return null;
+  }
+};
+
+export const getVerificationTokenByEmail = async (email: string) => {
+  try {
+    const verificationToken = await prisma.verificationToken.findFirst({
+      where: {
+        identifier: email,
+      },
+    });
+
+    return verificationToken;
+  } catch {
+    return null;
+  }
 };
