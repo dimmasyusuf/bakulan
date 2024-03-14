@@ -55,6 +55,20 @@ export const loginUser = async (values: z.infer<typeof loginFormSchema>) => {
 
   const { email, password } = validatedFields.data;
 
+  const existingUser = await getUserByEmail(email);
+
+  if (!existingUser || !existingUser.email || !existingUser.password) {
+    return { error: "Email does not exist!" };
+  }
+
+  if (!existingUser.email_verified) {
+    const verificationToken = await generateVerificationToken(
+      existingUser.email,
+    );
+
+    return { success: "Confirmation email sent!" };
+  }
+
   try {
     await signIn("credentials", { email, password, redirectTo: "/" });
   } catch (error) {
