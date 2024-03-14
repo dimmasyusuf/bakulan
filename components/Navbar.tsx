@@ -36,7 +36,7 @@ export default async function Navbar() {
         {session ? (
           <AuthProfile user={session?.user} />
         ) : (
-          <AuthDialog type="login" />
+          <AuthDialog type="register" />
         )}
       </div>
     </nav>

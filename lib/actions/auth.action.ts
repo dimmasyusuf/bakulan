@@ -41,9 +41,9 @@ export const createUser = async ({
     },
   });
 
-  // TODO: send verification email token
+  const verificationToken = await generateVerificationToken(email);
 
-  return { success: "User created!" };
+  return { success: "Confirmation email sent!" };
 };
 
 export const loginUser = async (values: z.infer<typeof loginFormSchema>) => {
