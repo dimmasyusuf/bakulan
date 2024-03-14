@@ -63,7 +63,7 @@ export const resetPasswordFormSchema = z
   })
   .refine(
     (values) => {
-      values.password === values.confirmPassword;
+      return values.password === values.confirmPassword;
     },
     {
       message: "Passwords do not match.",
