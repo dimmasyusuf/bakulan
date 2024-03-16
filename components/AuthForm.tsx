@@ -32,6 +32,7 @@ import {
   CheckCircledIcon,
   ExclamationTriangleIcon,
 } from "@radix-ui/react-icons";
+import { sendEmail } from "@/lib/actions/resend.action";
 
 export default function AuthForm({
   type,
@@ -141,10 +142,17 @@ export default function AuthForm({
       setIsSubmitting(true);
 
       setTimeout(async () => {
-        toast.success("Email sent successfully.");
-        sendEmailForm.reset();
-        setIsSubmitting(false);
-        setResetStep(2);
+        const email = await sendEmail(values);
+
+        if (email.status === 200) {
+          toast.success("Email sent successfully.");
+          sendEmailForm.reset();
+          setIsSubmitting(false);
+          setResetStep(2);
+        } else {
+          setAuthError(email.message);
+          setIsSubmitting(false);
+        }
       }, 1000);
     } catch (error) {
       console.log("error: ", error);
