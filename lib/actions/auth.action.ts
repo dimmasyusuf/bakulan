@@ -1,13 +1,18 @@
 "use server";
 
 import { z } from "zod";
-import { loginFormSchema, registerFormSchema } from "../validator";
+import {
+  loginFormSchema,
+  registerFormSchema,
+  resetPasswordFormSchema,
+} from "../validator";
 import bcrypt from "bcryptjs";
 import prisma from "../db";
 import { getUserByEmail } from "./user.action";
 import { signIn, signOut } from "@/auth";
 import { AuthError } from "next-auth";
 import { Role } from "@prisma/client";
+import { v4 as uuidv4 } from "uuid";
 
 export const createUser = async ({
   values,
@@ -40,9 +45,9 @@ export const createUser = async ({
     },
   });
 
-  // TODO: send verification email token
+  const verificationToken = await generateVerificationToken(email);
 
-  return { success: "User created!" };
+  return { success: "Confirmation email sent!" };
 };
 
 export const loginUser = async (values: z.infer<typeof loginFormSchema>) => {
@@ -53,6 +58,20 @@ export const loginUser = async (values: z.infer<typeof loginFormSchema>) => {
   }
 
   const { email, password } = validatedFields.data;
+
+  const existingUser = await getUserByEmail(email);
+
+  if (!existingUser || !existingUser.email || !existingUser.password) {
+    return { error: "Email does not exist!" };
+  }
+
+  if (!existingUser.email_verified) {
+    const verificationToken = await generateVerificationToken(
+      existingUser.email,
+    );
+
+    return { success: "Confirmation email sent!" };
+  }
 
   try {
     await signIn("credentials", { email, password, redirectTo: "/" });
@@ -72,4 +91,120 @@ export const loginUser = async (values: z.infer<typeof loginFormSchema>) => {
 
 export const logoutUser = async () => {
   await signOut();
+};
+
+export const resetPassword = async ({
+  values,
+  token,
+}: {
+  values: z.infer<typeof resetPasswordFormSchema>;
+  token: string;
+}) => {
+  try {
+    const verificationToken = await getVerificationTokenByToken(token);
+
+    if (!verificationToken) {
+      return { error: "Invalid token!" };
+    }
+
+    const expires = verificationToken?.expires;
+    const email = verificationToken?.identifier;
+
+    if (!expires || expires < new Date()) {
+      return { error: "Token expired!" };
+    }
+
+    if (!email) {
+      return { error: "Invalid token!" };
+    }
+
+    const existingUser = await getUserByEmail(email);
+
+    if (!existingUser || !existingUser.email || !existingUser.password) {
+      return { error: "User not found!" };
+    }
+
+    const samePassword = await bcrypt.compare(
+      values.password,
+      existingUser.password,
+    );
+
+    if (samePassword) {
+      return { error: "Password cannot be the same!" };
+    }
+
+    const hashedPassword = await bcrypt.hash(values.password, 10);
+
+    await prisma.user.update({
+      where: {
+        email,
+      },
+      data: {
+        password: hashedPassword,
+      },
+    });
+
+    await prisma.verificationToken.delete({
+      where: {
+        id: verificationToken.id,
+      },
+    });
+
+    return { success: "Password reset successfully!" };
+  } catch (error) {
+    return { error: "Failed to reset password!" };
+  }
+};
+
+export const generateVerificationToken = async (email: string) => {
+  const token = uuidv4();
+  const expires = new Date(new Date().getTime() + 3600 * 1000);
+
+  const existingToken = await getVerificationTokenByEmail(email);
+
+  if (existingToken) {
+    await prisma.verificationToken.delete({
+      where: {
+        id: existingToken.id,
+      },
+    });
+  }
+
+  const verificationToken = await prisma.verificationToken.create({
+    data: {
+      identifier: email,
+      token,
+      expires,
+    },
+  });
+
+  return verificationToken;
+};
+
+export const getVerificationTokenByToken = async (token: string) => {
+  try {
+    const verificationToken = await prisma.verificationToken.findUnique({
+      where: {
+        token,
+      },
+    });
+
+    return verificationToken;
+  } catch {
+    return null;
+  }
+};
+
+export const getVerificationTokenByEmail = async (email: string) => {
+  try {
+    const verificationToken = await prisma.verificationToken.findFirst({
+      where: {
+        identifier: email,
+      },
+    });
+
+    return verificationToken;
+  } catch {
+    return null;
+  }
 };

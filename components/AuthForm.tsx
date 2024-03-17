@@ -8,7 +8,12 @@ import { FaCashRegister } from "react-icons/fa6";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 
-import { loginFormSchema, registerFormSchema } from "@/lib/validator";
+import {
+  loginFormSchema,
+  registerFormSchema,
+  resetPasswordFormSchema,
+  sendEmailFormSchema,
+} from "@/lib/validator";
 import {
   Form,
   FormControl,
@@ -20,17 +25,19 @@ import {
 import { Button } from "./ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Dispatch, useState } from "react";
+import { Dispatch, useCallback, useEffect, useState } from "react";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "./ui/select";
-import { createUser, loginUser } from "@/lib/actions/auth.action";
+  createUser,
+  loginUser,
+  resetPassword,
+} from "@/lib/actions/auth.action";
 import { Role } from "@prisma/client";
-import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
+import {
+  CheckCircledIcon,
+  ExclamationTriangleIcon,
+} from "@radix-ui/react-icons";
+import { sendEmail } from "@/lib/actions/resend.action";
+import { useRouter, useSearchParams } from "next/navigation";
 
 export default function AuthForm({
   type,
@@ -40,10 +47,45 @@ export default function AuthForm({
   openAuth: Dispatch<boolean>;
 }) {
   const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [showConfirmPassword, setShowConfirmPassword] =
+    useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [registerStep, setRegisterStep] = useState<number>(1);
+  const [resetStep, setResetStep] = useState<number>(1);
+  const [variant, setVariant] = useState<"login" | "reset">("login");
   const [userRole, setUserRole] = useState<Role>();
   const [authError, setAuthError] = useState<string>();
+  const params = useSearchParams();
+  const router = useRouter();
+
+  const handleResetPassword = () => {
+    const authName = params.get("auth");
+    const token = params.get("token");
+
+    if (authName === "reset-password" && token) {
+      openAuth(true);
+      setVariant("reset");
+      setResetStep(3);
+    }
+  };
+
+  useEffect(() => {
+    handleResetPassword();
+  }, []);
+
+  const toggleVariant = useCallback(() => {
+    setVariant((currentVariant) =>
+      currentVariant === "login" ? "reset" : "login",
+    );
+
+    loginForm.reset();
+    sendEmailForm.reset();
+    resetPasswordForm.reset();
+    setAuthError("");
+    setResetStep(1);
+    setShowPassword(false);
+    setShowConfirmPassword(false);
+  }, []);
 
   const registerForm = useForm<z.infer<typeof registerFormSchema>>({
     resolver: zodResolver(registerFormSchema),
@@ -62,6 +104,21 @@ export default function AuthForm({
     },
   });
 
+  const sendEmailForm = useForm<z.infer<typeof sendEmailFormSchema>>({
+    resolver: zodResolver(sendEmailFormSchema),
+    defaultValues: {
+      email: "",
+    },
+  });
+
+  const resetPasswordForm = useForm<z.infer<typeof resetPasswordFormSchema>>({
+    resolver: zodResolver(resetPasswordFormSchema),
+    defaultValues: {
+      password: "",
+      confirmPassword: "",
+    },
+  });
+
   function onRegister(values: z.infer<typeof registerFormSchema>) {
     try {
       setIsSubmitting(true);
@@ -73,6 +130,7 @@ export default function AuthForm({
           setIsSubmitting(false);
         } else {
           registerForm.reset();
+          setAuthError("");
           setIsSubmitting(false);
           openAuth(false);
         }
@@ -94,8 +152,58 @@ export default function AuthForm({
           setIsSubmitting(false);
         } else {
           loginForm.reset();
+          setAuthError("");
           setIsSubmitting(false);
           openAuth(false);
+        }
+      }, 1000);
+    } catch (error) {
+      console.log("error: ", error);
+    }
+  }
+
+  function onSendEmail(values: z.infer<typeof sendEmailFormSchema>) {
+    try {
+      setIsSubmitting(true);
+
+      setTimeout(async () => {
+        const email = await sendEmail(values);
+
+        if (email?.error) {
+          setAuthError(email.error);
+          setIsSubmitting(false);
+        } else {
+          sendEmailForm.reset();
+          setAuthError("");
+          setIsSubmitting(false);
+          setResetStep(2);
+        }
+      }, 1000);
+    } catch (error) {
+      console.log("error: ", error);
+    }
+  }
+
+  function onResetPassword(values: z.infer<typeof resetPasswordFormSchema>) {
+    const token = params.get("token");
+
+    try {
+      setIsSubmitting(true);
+
+      setTimeout(async () => {
+        if (token) {
+          const password = await resetPassword({ values, token });
+
+          if (password?.error) {
+            setAuthError(password.error);
+            setIsSubmitting(false);
+          } else {
+            resetPasswordForm.reset();
+            setVariant("login");
+            setAuthError("");
+            setIsSubmitting(false);
+            router.push("/");
+          }
         }
       }, 1000);
     } catch (error) {
@@ -122,7 +230,9 @@ export default function AuthForm({
 
       <div className="flex flex-col gap-1">
         <span className="text-xl font-bold">
-          {type === "register" ? "Register" : "Login"}
+          {type === "register" && "Register"}
+          {type && variant === "login" && "Login"}
+          {variant === "reset" && "Reset Password"}
         </span>
         <span className="text-muted-foreground">to continue to Bakulan</span>
       </div>
@@ -256,7 +366,7 @@ export default function AuthForm({
           </Form>
         )}
 
-        {type === "login" && (
+        {type && variant === "login" && (
           <Form {...loginForm}>
             <form
               onSubmit={loginForm.handleSubmit(onLogin)}
@@ -337,16 +447,200 @@ export default function AuthForm({
             </form>
           </Form>
         )}
+
+        {variant === "reset" && resetStep === 1 && (
+          <Form {...sendEmailForm}>
+            <form
+              onSubmit={sendEmailForm.handleSubmit(onSendEmail)}
+              className="space-y-4"
+            >
+              <FormField
+                control={sendEmailForm.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem className="space-y-0.5">
+                    <FormLabel className="text-sm text-primary">
+                      Email address
+                    </FormLabel>
+                    <FormControl>
+                      <Input type="email" className="shadow-none" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {authError && (
+                <div className="flex h-9 items-center gap-x-2 rounded-md bg-destructive/15 px-3 py-1 text-sm text-destructive">
+                  <ExclamationTriangleIcon className="h-4 w-4" />
+                  <span>{authError}</span>
+                </div>
+              )}
+
+              <Button
+                type="submit"
+                size="sm"
+                className="h-9 w-full"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "SENDING..." : "SEND EMAIL"}
+              </Button>
+            </form>
+          </Form>
+        )}
+
+        {variant === "reset" && resetStep === 2 && (
+          <div className="flex flex-col space-y-4">
+            <div className="flex max-w-[336px] flex-col space-y-4 rounded-md border p-6">
+              <CheckCircledIcon className="h-12 w-12 text-primary" />
+              <span className="text-sm text-primary">
+                We've sent an email to your email address. Please check your
+                inbox and follow the instructions to reset your password.
+              </span>
+            </div>
+
+            <Button
+              size="sm"
+              className="h-9 w-full"
+              onClick={() => toggleVariant()}
+            >
+              BACK TO LOGIN
+            </Button>
+          </div>
+        )}
+
+        {variant === "reset" && resetStep === 3 && (
+          <Form {...resetPasswordForm}>
+            <form
+              onSubmit={resetPasswordForm.handleSubmit(onResetPassword)}
+              className="space-y-4"
+            >
+              <FormField
+                control={resetPasswordForm.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem className="space-y-0.5">
+                    <FormLabel className="text-sm text-primary">
+                      Password
+                    </FormLabel>
+                    <div className="relative flex w-full items-center">
+                      <FormControl>
+                        <Input
+                          type={showPassword ? "text" : "password"}
+                          className="shadow-none"
+                          {...field}
+                        />
+                      </FormControl>
+                      {showPassword ? (
+                        <div className="absolute right-0.5 flex items-center justify-center rounded-e-md bg-background py-1 pl-2 pr-4">
+                          <span
+                            className="flex h-6 w-6 items-center justify-center rounded-md hover:bg-accent"
+                            onClick={() => setShowPassword(false)}
+                          >
+                            <RiEyeCloseLine className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="absolute right-0.5 flex items-center justify-center rounded-e-md bg-background py-1 pl-2 pr-4">
+                          <span
+                            className="flex h-6 w-6 items-center justify-center rounded-md hover:bg-accent"
+                            onClick={() => setShowPassword(true)}
+                          >
+                            <RiEyeLine className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={resetPasswordForm.control}
+                name="confirmPassword"
+                render={({ field }) => (
+                  <FormItem className="space-y-0.5">
+                    <FormLabel className="text-sm text-primary">
+                      Confirm Password
+                    </FormLabel>
+                    <div className="relative flex w-full items-center">
+                      <FormControl>
+                        <Input
+                          type={showConfirmPassword ? "text" : "password"}
+                          className="shadow-none"
+                          {...field}
+                        />
+                      </FormControl>
+                      {showConfirmPassword ? (
+                        <div className="absolute right-0.5 flex items-center justify-center rounded-e-md bg-background py-1 pl-2 pr-4">
+                          <span
+                            className="flex h-6 w-6 items-center justify-center rounded-md hover:bg-accent"
+                            onClick={() => setShowConfirmPassword(false)}
+                          >
+                            <RiEyeCloseLine className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="absolute right-0.5 flex items-center justify-center rounded-e-md bg-background py-1 pl-2 pr-4">
+                          <span
+                            className="flex h-6 w-6 items-center justify-center rounded-md hover:bg-accent"
+                            onClick={() => setShowConfirmPassword(true)}
+                          >
+                            <RiEyeLine className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {authError && (
+                <div className="flex h-9 items-center gap-x-2 rounded-md bg-destructive/15 px-3 py-1 text-sm text-destructive">
+                  <ExclamationTriangleIcon className="h-4 w-4" />
+                  <span>{authError}</span>
+                </div>
+              )}
+
+              <Button
+                type="submit"
+                size="sm"
+                className="h-9 w-full"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "RESETTING..." : "RESET PASSWORD"}
+              </Button>
+            </form>
+          </Form>
+        )}
       </div>
 
-      {type === "login" && (
+      {type && variant === "login" && (
         <div className="flex items-center gap-1">
           <span className="text-sm text-muted-foreground">
             Forgot password?
           </span>
 
-          <span className="cursor-pointer text-sm text-primary hover:underline">
+          <span
+            onClick={() => toggleVariant()}
+            className="cursor-pointer text-sm text-primary hover:underline"
+          >
             Reset
+          </span>
+        </div>
+      )}
+
+      {variant === "reset" && resetStep === 1 && (
+        <div className="flex items-center gap-1">
+          <span className="text-sm text-muted-foreground">Back to login?</span>
+
+          <span
+            onClick={() => toggleVariant()}
+            className="cursor-pointer text-sm text-primary hover:underline"
+          >
+            Login
           </span>
         </div>
       )}
