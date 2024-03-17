@@ -59,6 +59,7 @@ export default function AuthForm({
     loginForm.reset();
     sendEmailForm.reset();
     resetPasswordForm.reset();
+    setAuthError("");
     setResetStep(1);
     setShowPassword(false);
     setShowConfirmPassword(false);
@@ -107,6 +108,7 @@ export default function AuthForm({
           setIsSubmitting(false);
         } else {
           registerForm.reset();
+          setAuthError("");
           setIsSubmitting(false);
           openAuth(false);
         }
@@ -128,6 +130,7 @@ export default function AuthForm({
           setIsSubmitting(false);
         } else {
           loginForm.reset();
+          setAuthError("");
           setIsSubmitting(false);
           openAuth(false);
         }
@@ -144,14 +147,14 @@ export default function AuthForm({
       setTimeout(async () => {
         const email = await sendEmail(values);
 
-        if (email.status === 200) {
-          toast.success("Email sent successfully.");
+        if (email?.error) {
+          setAuthError(email.error);
+          setIsSubmitting(false);
+        } else {
           sendEmailForm.reset();
+          setAuthError("");
           setIsSubmitting(false);
           setResetStep(2);
-        } else {
-          setAuthError(email.message);
-          setIsSubmitting(false);
         }
       }, 1000);
     } catch (error) {

@@ -25,10 +25,10 @@ export default function Email({ name }: { name: string }) {
       <Preview>{previewText}</Preview>
       <Tailwind>
         <Body className="flex items-center justify-center bg-neutral-50 py-2 font-sans">
-          <Container className="flex items-center justify-center space-y-4 overflow-auto rounded-md bg-white p-0 px-6 py-12">
+          <Container className="flex items-center justify-center space-y-4 overflow-auto bg-white p-0 px-6 py-12">
             <Section>
               <Img
-                src="../public/logo.png"
+                src="http://localhost:3000/logo.png"
                 alt="Bakulan Logo"
                 width="48"
                 height="48"

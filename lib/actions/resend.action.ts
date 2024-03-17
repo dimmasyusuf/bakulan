@@ -11,25 +11,34 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 export const sendEmail = async (
   values: z.infer<typeof sendEmailFormSchema>,
 ) => {
-  const user = await getUserByEmail(values.email);
-  const name = user?.name || "there";
+  const existingUser = await getUserByEmail(values.email);
+  const name = existingUser?.name || "there";
+
+  console.log("existingUser", existingUser);
 
   try {
-    await resend.emails.send({
-      from: "Bakulan <onboarding@resend.dev>",
-      to: values.email,
-      subject: "Reset Password",
-      react: Email({ name }),
-    });
+    if (existingUser) {
+      await resend.emails.send({
+        from: "Bakulan <onboarding@resend.dev>",
+        to: values.email,
+        subject: "Reset Password",
+        react: Email({ name }),
+      });
+
+      return {
+        status: 200,
+        message: "Email sent successfully",
+      };
+    }
 
     return {
-      status: 200,
-      message: "Email sent successfully",
+      status: 404,
+      error: "Email not found",
     };
   } catch (error) {
     return {
       status: 500,
-      message: "Failed to send email",
+      error: "Failed to send email",
     };
   }
 };
