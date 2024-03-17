@@ -5,15 +5,15 @@ import { z } from "zod";
 import { sendEmailFormSchema } from "../validator";
 import Email from "@/components/Email";
 import { getUserByEmail } from "./user.action";
-import { getVerificationTokenByEmail } from "./auth.action";
+import { generateVerificationToken } from "./auth.action";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 export const sendEmail = async (
   values: z.infer<typeof sendEmailFormSchema>,
 ) => {
+  const verificationToken = await generateVerificationToken(values.email);
   const existingUser = await getUserByEmail(values.email);
-  const verificationToken = await getVerificationTokenByEmail(values.email);
   const name = existingUser?.name || "there";
   const token = verificationToken?.token || "";
 

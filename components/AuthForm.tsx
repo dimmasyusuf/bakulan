@@ -26,14 +26,18 @@ import { Button } from "./ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Dispatch, useCallback, useEffect, useState } from "react";
-import { createUser, loginUser } from "@/lib/actions/auth.action";
+import {
+  createUser,
+  loginUser,
+  resetPassword,
+} from "@/lib/actions/auth.action";
 import { Role } from "@prisma/client";
 import {
   CheckCircledIcon,
   ExclamationTriangleIcon,
 } from "@radix-ui/react-icons";
 import { sendEmail } from "@/lib/actions/resend.action";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 export default function AuthForm({
   type,
@@ -52,6 +56,7 @@ export default function AuthForm({
   const [userRole, setUserRole] = useState<Role>();
   const [authError, setAuthError] = useState<string>();
   const params = useSearchParams();
+  const router = useRouter();
 
   const handleResetPassword = () => {
     const authName = params.get("auth");
@@ -66,7 +71,7 @@ export default function AuthForm({
 
   useEffect(() => {
     handleResetPassword();
-  }, [handleResetPassword]);
+  }, []);
 
   const toggleVariant = useCallback(() => {
     setVariant((currentVariant) =>
@@ -180,14 +185,26 @@ export default function AuthForm({
   }
 
   function onResetPassword(values: z.infer<typeof resetPasswordFormSchema>) {
+    const token = params.get("token");
+
     try {
       setIsSubmitting(true);
 
       setTimeout(async () => {
-        toast.success("Password reset successfully.");
-        resetPasswordForm.reset();
-        setIsSubmitting(false);
-        openAuth(false);
+        if (token) {
+          const password = await resetPassword({ values, token });
+
+          if (password?.error) {
+            setAuthError(password.error);
+            setIsSubmitting(false);
+          } else {
+            resetPasswordForm.reset();
+            setVariant("login");
+            setAuthError("");
+            setIsSubmitting(false);
+            router.push("/");
+          }
+        }
       }, 1000);
     } catch (error) {
       console.log("error: ", error);
