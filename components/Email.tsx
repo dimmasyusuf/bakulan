@@ -12,7 +12,13 @@ import {
   Text,
 } from "@react-email/components";
 
-export default function Email({ name }: { name: string }) {
+export default function Email({
+  name,
+  token,
+}: {
+  name: string;
+  token: string;
+}) {
   const previewText = "Reset your password for Bakulan account";
 
   return (
@@ -41,7 +47,7 @@ export default function Email({ name }: { name: string }) {
                 account. If this was you, you can set a new password here:
               </Text>
               <Button
-                href="https://bakulan.vercel.app/reset-password?token=123"
+                href={`http://localhost:3000/?auth=reset-password&token=${token}`}
                 className="w-fit rounded-md bg-orange-400 px-3 py-2 text-xs font-medium text-white"
               >
                 Reset Password

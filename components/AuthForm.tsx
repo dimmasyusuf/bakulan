@@ -25,7 +25,7 @@ import {
 import { Button } from "./ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Dispatch, useCallback, useState } from "react";
+import { Dispatch, useCallback, useEffect, useState } from "react";
 import { createUser, loginUser } from "@/lib/actions/auth.action";
 import { Role } from "@prisma/client";
 import {
@@ -33,6 +33,7 @@ import {
   ExclamationTriangleIcon,
 } from "@radix-ui/react-icons";
 import { sendEmail } from "@/lib/actions/resend.action";
+import { useSearchParams } from "next/navigation";
 
 export default function AuthForm({
   type,
@@ -50,6 +51,22 @@ export default function AuthForm({
   const [variant, setVariant] = useState<"login" | "reset">("login");
   const [userRole, setUserRole] = useState<Role>();
   const [authError, setAuthError] = useState<string>();
+  const params = useSearchParams();
+
+  const handleResetPassword = () => {
+    const authName = params.get("auth");
+    const token = params.get("token");
+
+    if (authName === "reset-password" && token) {
+      openAuth(true);
+      setVariant("reset");
+      setResetStep(3);
+    }
+  };
+
+  useEffect(() => {
+    handleResetPassword();
+  }, [handleResetPassword]);
 
   const toggleVariant = useCallback(() => {
     setVariant((currentVariant) =>
